@@ -1,4 +1,4 @@
-# ConectaGov — Protótipo Mobile
+# Disk Gov — Protótipo Mobile
 
 Protótipo de alta fidelidade para um aplicativo que reúne serviços públicos essenciais em um único lugar.
 
@@ -31,30 +31,6 @@ Facilitar a localização e o acesso a serviços como Polícia, Bombeiros, SAMU,
   - gesto de arrastar;
   - transições entre páginas.
 
-## Como executar
-
-```bash
-npm install
-npm run dev
-```
-
-Depois abra o endereço informado pelo Vite.
-
-## Como colocar no GitHub
-
-1. Crie um repositório no GitHub, por exemplo `conectagov`.
-2. Extraia este projeto.
-3. Abra o terminal dentro da pasta.
-4. Execute:
-
-```bash
-git init
-git add .
-git commit -m "feat: cria prototipo ConectaGov"
-git branch -M main
-git remote add origin SEU_LINK_DO_GITHUB
-git push -u origin main
-```
 
 ## Observação
 
