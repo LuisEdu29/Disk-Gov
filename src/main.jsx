@@ -3,8 +3,8 @@ import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell, Car, ChevronRight, Clock3, Fingerprint, Flame, HeartHandshake, Home,
-  MapPin, Menu, Moon, Phone, Search, Shield, ShoppingBag, Siren, Star, Sun,
-  Users, Venus, X
+  MapPin, Menu, Moon, Phone, Search, Shield, ShieldAlert, ShoppingBag, Siren,
+  Star, Sun, Users, X
 } from "lucide-react";
 import "./styles.css";
 
@@ -16,7 +16,7 @@ const services = [
   { id: "defesa", title: "Defesa Civil", subtitle: "Riscos e desastres", icon: Siren, tone: "orange", number: "199" },
   { id: "guarda", title: "Guarda Municipal", subtitle: "Segurança urbana", icon: Star, tone: "teal", number: "153" },
   { id: "prf", title: "Polícia Rodoviária Federal", subtitle: "Emergências em rodovias federais", icon: Car, tone: "indigo", number: "191" },
-  { id: "mulher", title: "Central de Atendimento à Mulher", subtitle: "Denúncias de violência doméstica", icon: Venus, tone: "pink", number: "180" },
+  { id: "mulher", title: "Central de Atendimento à Mulher", subtitle: "Denúncias de violência doméstica", icon: ShieldAlert, tone: "pink", number: "180" },
   { id: "policiacivil", title: "Polícia Civil", subtitle: "Investigação e ocorrências", icon: Fingerprint, tone: "yellow", number: "197" },
   { id: "procon", title: "Procon", subtitle: "Defesa do consumidor", icon: ShoppingBag, tone: "cyan", number: "151" }
 ];
