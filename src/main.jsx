@@ -10,7 +10,7 @@ import {
 import "./styles.css";
 
 const services = [
-  { id: "policia", title: "Polícia", subtitle: "Emergência e segurança", icon: Shield, tone: "blue", number: "190", description: "Atende situações de emergência relacionadas à segurança pública, como crimes em andamento, ameaças e situações que exigem intervenção policial.", keywords: ["crime", "roubo", "furto", "assalto", "violência", "emergência", "perigo", "socorro", "agressão", "briga"] },
+  { id: "policia", title: "Polícia Militar", subtitle: "Emergência e segurança", icon: Shield, tone: "blue", number: "190", description: "Atende situações de emergência relacionadas à segurança pública, como crimes em andamento, ameaças e situações que exigem intervenção policial.", keywords: ["crime", "roubo", "furto", "assalto", "violência", "emergência", "perigo", "socorro", "agressão", "briga"] },
   { id: "bombeiros", title: "Bombeiros", subtitle: "Incêndios e resgates", icon: Flame, tone: "red", number: "193", description: "Atende incêndios, resgates, acidentes e outras situações que envolvam risco à vida, à integridade física ou ao patrimônio.", keywords: ["incêndio", "fogo", "resgate", "acidente", "desabamento", "vazamento de gás", "gato preso", "explosão", "afogamento"] },
   { id: "samu", title: "SAMU", subtitle: "Emergências médicas", icon: HeartHandshake, tone: "green", number: "192", description: "Presta atendimento médico de urgência e emergência, incluindo situações de mal súbito, acidentes e outros problemas de saúde que precisam de atendimento rápido.", keywords: ["mal súbito", "desmaio", "infarto", "avc", "derrame", "ferimento grave", "parada cardíaca", "convulsão", "ambulância", "acidente"] },
   { id: "conselho", title: "Conselho Tutelar", subtitle: "Proteção de crianças", icon: Users, tone: "purple", number: "100", description: "Atua na proteção de crianças e adolescentes quando seus direitos estão ameaçados ou violados.", keywords: ["criança", "adolescente", "maus-tratos infantil", "abuso infantil", "negligência", "trabalho infantil", "abandono de menor"] },
@@ -381,7 +381,7 @@ function App() {
       <div className="mobile-frame">
         <header className="topbar">
           <button className="icon-btn" aria-label="Abrir menu" onClick={() => setMenuOpen(true)}><Menu size={23}/></button>
-          <div className="brand"><span>CHAMOU,</span><b>FALOU</b></div>
+          <div className="brand"><span>CHAMOU,  </span><b>FALOU</b></div>
           <div className="topbar-actions">
             <button
               className="icon-btn"
