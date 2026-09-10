@@ -331,7 +331,7 @@ function App() {
       <div className="mobile-frame">
         <header className="topbar">
           <button className="icon-btn" aria-label="Abrir menu" onClick={() => setMenuOpen(true)}><Menu size={23}/></button>
-          <div className="brand"><span>CHAMOU  ,  </span><b>FALOU</b></div>
+          <div className="brand"><span>CHAMOU,  </span><b>FALOU</b></div>
           <div className="topbar-actions">
             <button
               className="icon-btn"
