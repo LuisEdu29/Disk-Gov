@@ -10,7 +10,7 @@ import {
 import "./styles.css";
 
 const services = [
-  { id: "policia", title: "Polícia", subtitle: "Emergência e segurança", icon: Shield, tone: "blue", number: "190" },
+  { id: "policiamilitar", title: "Polícia Militar", subtitle: "Emergência e segurança", icon: Shield, tone: "blue", number: "190" },
   { id: "bombeiros", title: "Bombeiros", subtitle: "Incêndios e resgates", icon: Flame, tone: "red", number: "193" },
   { id: "samu", title: "SAMU", subtitle: "Emergências médicas", icon: HeartHandshake, tone: "green", number: "192" },
   { id: "conselho", title: "Conselho Tutelar", subtitle: "Proteção de crianças", icon: Users, tone: "purple", number: "100" },
