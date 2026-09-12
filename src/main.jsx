@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence } from "framer-motion";
+import { TextToSpeech } from "@capacitor-community/text-to-speech";
+import { SpeechRecognition } from "@capacitor-community/speech-recognition";
 import {
   Accessibility, AlertTriangle, Bell, Car, Check, ChevronRight, ClipboardList, Clock3, Copy,
   Fingerprint, Flame, Gavel, Hand, HeartHandshake, Home, Info, Landmark, LifeBuoy, Loader2,
   MapPin, Menu, Mic, MicOff, Moon, Phone, Scale, Search, Share2, Shield, ShieldAlert,
-  ShoppingBag, Siren, Star, Stethoscope, Sun, Users, Wifi, X
+  ShoppingBag, Siren, Star, Stethoscope, Sun, Users, Wifi, X, Volume2, Navigation, ExternalLink, UserPlus, Send, LocateFixed
 } from "lucide-react";
 import "./styles.css";
 
@@ -34,6 +36,26 @@ const services = [
 
 const sosOptions = ["policia", "samu", "bombeiros"];
 const popularServiceIds = ["policia", "samu", "bombeiros", "procon", "anatel"];
+
+const situationGuides = [
+  { id: "saude", icon: HeartHandshake, title: "Problema de saúde", description: "Mal súbito, desmaio, convulsão, ferimento grave ou outra emergência médica.", service: "samu", color: "green" },
+  { id: "crime", icon: ShieldAlert, title: "Crime ou violência", description: "Crime em andamento, ameaça, agressão, roubo ou situação de perigo imediato.", service: "policia", color: "blue" },
+  { id: "incendio", icon: Flame, title: "Incêndio ou resgate", description: "Fogo, explosão, acidente, afogamento, desabamento ou necessidade de resgate.", service: "bombeiros", color: "red" },
+  { id: "alagamento", icon: Siren, title: "Alagamento ou risco", description: "Enchente, alagamento, deslizamento, queda de árvore ou outro risco da Defesa Civil.", service: "defesa", color: "orange" },
+  { id: "crianca", icon: Users, title: "Criança ou adolescente", description: "Violência, abuso, abandono, negligência ou violação de direitos.", service: "conselho", color: "purple" },
+  { id: "mulher", icon: Shield, title: "Violência contra a mulher", description: "Ameaça, agressão, violência doméstica ou necessidade de orientação.", service: "mulher", color: "pink" },
+  { id: "transito", icon: Car, title: "Acidente de trânsito", description: "Acidente com feridos, capotamento ou ocorrência em rodovia.", service: "samu", color: "indigo" },
+  { id: "outro", icon: Search, title: "Não sei qual serviço", description: "Abra o guia ou pesquise uma situação para encontrar o canal adequado.", service: null, color: "cyan" }
+];
+
+const nearbyCategories = [
+  { label: "Hospitais", query: "hospital" },
+  { label: "Delegacias", query: "delegacia" },
+  { label: "Bombeiros", query: "corpo de bombeiros" },
+  { label: "UBS", query: "UBS" },
+  { label: "Guarda Municipal", query: "guarda municipal" },
+  { label: "Defesa Civil", query: "defesa civil" }
+];
 
 const recentSeed = [
   { id: "bombeiros", title: "Bombeiros", number: "193", time: "Hoje, 09:42" },
@@ -174,13 +196,27 @@ function App() {
   const [recent, setRecent] = useState(getInitialRecent);
   const [toast, setToast] = useState("");
   const [theme, setTheme] = useState(getInitialTheme);
+  const [accessibilityMode, setAccessibilityMode] = useState(() => localStorage.getItem("accessibilityMode") === "true");
   const [favorites, setFavorites] = useState(getInitialFavorites);
   const [sosOpen, setSosOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [locationLabel, setLocationLabel] = useState("Sua região");
   const [locating, setLocating] = useState(false);
   const [listening, setListening] = useState(false);
+  const [voiceAssistantOpen, setVoiceAssistantOpen] = useState(false);
+  const [situationOpen, setSituationOpen] = useState(false);
+  const [selectedSituation, setSelectedSituation] = useState(null);
+  const [contactsOpen, setContactsOpen] = useState(false);
+  const [emergencyContacts, setEmergencyContacts] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("emergencyContacts") || "[]"); } catch { return []; }
+  });
+  const [online, setOnline] = useState(() => typeof navigator === "undefined" ? true : navigator.onLine);
+  const [voiceStatus, setVoiceStatus] = useState("Toque no microfone e diga o que precisa.");
+  const nativeVoiceRef = React.useRef(false);
+  const voiceListenerRef = React.useRef(null);
   const recognitionRef = React.useRef(null);
+  const touchStartRef = React.useRef(null);
+  const touchSwipedRef = React.useRef(false);
 
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 900);
@@ -190,6 +226,8 @@ function App() {
   useEffect(() => {
     return () => {
       recognitionRef.current && recognitionRef.current.stop();
+      if (voiceListenerRef.current) voiceListenerRef.current.remove().catch(() => {});
+      TextToSpeech.stop().catch(() => {});
     };
   }, []);
 
@@ -216,6 +254,27 @@ function App() {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("accessibility-mode", accessibilityMode);
+    localStorage.setItem("accessibilityMode", String(accessibilityMode));
+  }, [accessibilityMode]);
+
+  useEffect(() => {
+    localStorage.setItem("emergencyContacts", JSON.stringify(emergencyContacts));
+  }, [emergencyContacts]);
+
+  useEffect(() => {
+    const onlineHandler = () => setOnline(true);
+    const offlineHandler = () => setOnline(false);
+    window.addEventListener("online", onlineHandler);
+    window.addEventListener("offline", offlineHandler);
+    return () => {
+      window.removeEventListener("online", onlineHandler);
+      window.removeEventListener("offline", offlineHandler);
+    };
+  }, []);
+
 
   const toggleTheme = () => setTheme(t => t === "dark" ? "light" : "dark");
 
@@ -287,8 +346,9 @@ function App() {
     if (!confirmCallTarget) return;
     const service = confirmCallTarget;
     setConfirmCallTarget(null);
-    setSelected(service);
-    setToast(`Simulação: chamada para ${service.number}`);
+    setSelected(null);
+    setToast(`Abrindo chamada para ${service.number}`);
+    window.location.href = `tel:${String(service.number).replace(/\D/g, "")}`;
   };
 
   const cancelCall = () => setConfirmCallTarget(null);
@@ -317,7 +377,55 @@ function App() {
     const service = services.find(s => s.id === id);
     if (!service) return;
     setSosOpen(false);
-    setConfirmCallTarget(service);
+    requestCall(service);
+  };
+
+  const shareCurrentLocation = () => {
+    const share = (lat, lon) => {
+      const mapsUrl = `https://www.google.com/maps?q=${lat},${lon}`;
+      const text = `Minha localização atual: ${mapsUrl}`;
+      if (navigator.share) navigator.share({ title: "Minha localização", text, url: mapsUrl }).catch(() => {});
+      else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => setToast("Localização copiada"));
+      else window.open(mapsUrl, "_blank");
+    };
+    if (!navigator.geolocation) { setToast("Localização não disponível neste aparelho"); return; }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => share(coords.latitude, coords.longitude),
+      () => setToast("Permita o acesso à localização para compartilhar"),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const addEmergencyContact = () => {
+    const name = window.prompt("Nome do contato de emergência:");
+    if (!name) return;
+    const phone = window.prompt("Telefone do contato:");
+    if (!phone) return;
+    setEmergencyContacts(c => [...c, { id: `${Date.now()}`, name, phone }].slice(-5));
+    setToast(`${name} adicionado aos contatos de emergência`);
+  };
+
+  const removeEmergencyContact = (id) => setEmergencyContacts(c => c.filter(item => item.id !== id));
+
+  const openMapsSearch = (query) => {
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query + " perto de mim")}`;
+    window.open(url, "_blank");
+  };
+
+  const openSituation = (situation) => {
+    setSelectedSituation(situation);
+    setSituationOpen(true);
+    if (accessibilityMode) speakText(`${situation.title}. ${situation.description}`);
+  };
+
+  const useSituation = (situation) => {
+    setSituationOpen(false);
+    if (situation.service) {
+      const service = services.find(s => s.id === situation.service);
+      if (service) { openService(service); return; }
+    }
+    setActive("guia");
+    setToast("Use a busca ou o guia para encontrar o serviço adequado");
   };
 
   const locateUser = () => {
@@ -358,6 +466,312 @@ function App() {
     );
   };
 
+  const swipePages = ["inicio", "mapa", "guia", "sobre"];
+
+  const handleTouchStart = (e) => {
+    if (!e.touches?.length) return;
+    const touch = e.touches[0];
+    touchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now(),
+      edge: touch.clientX <= 28
+    };
+    touchSwipedRef.current = false;
+  };
+
+  const handleTouchMove = (e) => {
+    if (!touchStartRef.current || !e.touches?.length) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStartRef.current.x;
+    const dy = touch.clientY - touchStartRef.current.y;
+    if (Math.abs(dx) > 18 && Math.abs(dx) > Math.abs(dy) * 1.15) {
+      touchSwipedRef.current = true;
+      if (e.cancelable) e.preventDefault();
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!touchStartRef.current) return;
+    const start = touchStartRef.current;
+    const touch = e.changedTouches?.[0];
+    touchStartRef.current = null;
+    if (!touch) return;
+
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    const duration = Date.now() - start.time;
+    const isHorizontal = Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.2;
+    const isQuickEnough = duration < 700;
+    if (!isHorizontal || !isQuickEnough) return;
+
+    if (menuOpen) {
+      return;
+    }
+
+    // Puxar da borda esquerda abre o menu lateral.
+    if (start.edge && dx > 70) {
+      setMenuOpen(true);
+      return;
+    }
+
+    const currentIndex = swipePages.indexOf(active);
+    if (currentIndex === -1) return;
+    const nextIndex = dx < 0 ? currentIndex + 1 : currentIndex - 1;
+    if (nextIndex >= 0 && nextIndex < swipePages.length) {
+      setActive(swipePages[nextIndex]);
+      setSosOpen(false);
+      setSelected(null);
+    }
+  };
+
+  const speakText = async (text) => {
+    if (!text) return;
+    try {
+      await TextToSpeech.stop();
+      await TextToSpeech.speak({
+        text,
+        lang: "pt-BR",
+        rate: 0.92,
+        pitch: 1,
+        volume: 1,
+        queueStrategy: 0
+      });
+      return;
+    } catch {
+      // Fallback para navegador/WebView sem o plugin nativo.
+    }
+
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "pt-BR";
+      utterance.rate = 0.92;
+      utterance.pitch = 1;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const describeCurrentScreen = () => {
+    const screenNames = {
+      inicio: "Início. Emergência com Polícia, SAMU e Bombeiros. Abaixo você encontra busca, serviços mais usados e atendimentos recentes. Use o botão de microfone para falar com o assistente.",
+      mapa: `Serviços próximos. ${locationLabel === "Sua região" ? "Sua região ainda não foi identificada. Use o botão Atualizar localização." : `Sua região é ${locationLabel}.`} Você pode abrir hospitais, delegacias, bombeiros, UBS e outros locais no mapa.`,
+      guia: "Guia de serviços. Abra cada item para ouvir para que ele serve e o número de contato.",
+      salvos: favorites.length ? `Serviços salvos. Você tem ${favorites.length} serviço${favorites.length === 1 ? " salvo" : "s salvos"}. Toque em um item para ouvir seus detalhes.` : "Serviços salvos. Você ainda não tem favoritos. Salve um serviço usando a estrela.",
+      sobre: "Sobre o CHAMOU, FALOU. Um aplicativo para facilitar o acesso a serviços públicos e de emergência. Esta versão possui um modo de acessibilidade com narração e comandos de voz."
+    };
+    const text = screenNames[active] || "Tela atual do aplicativo.";
+    setVoiceStatus(text);
+    speakText(text);
+  };
+
+  useEffect(() => {
+    if (!accessibilityMode || loading || voiceAssistantOpen) return;
+    const timer = setTimeout(() => describeCurrentScreen(), 250);
+    return () => clearTimeout(timer);
+  }, [active, accessibilityMode, loading]);
+
+  const executeVoiceCommand = (rawCommand) => {
+    const command = normalizeText(rawCommand || "").trim();
+    if (!command) return;
+
+    if (command.includes("parar") || command.includes("silencio") || command.includes("pare de falar")) {
+      TextToSpeech.stop().catch(() => {});
+      window.speechSynthesis?.cancel();
+      setVoiceStatus("Voz interrompida.");
+      return;
+    }
+
+    if (command.includes("ler tela") || command.includes("leia a tela") || command.includes("onde estou")) {
+      describeCurrentScreen();
+      return;
+    }
+
+    if (command.includes("inicio") || command.includes("voltar para inicio")) {
+      setActive("inicio");
+      setMenuOpen(false);
+      const text = "Início. Precisa de ajuda? Diga o nome do serviço ou uma situação, como polícia, SAMU ou incêndio.";
+      setVoiceStatus(text);
+      speakText(text);
+      return;
+    }
+
+    if (command.includes("guia")) {
+      setActive("guia");
+      setMenuOpen(false);
+      speakText("Guia de serviços aberto. Diga o nome do serviço para ouvir mais informações.");
+      return;
+    }
+
+    if (command.includes("salvos") || command.includes("favoritos")) {
+      setActive("salvos");
+      setMenuOpen(false);
+      speakText(favorites.length ? `Serviços salvos. Você tem ${favorites.length} favoritos.` : "Você ainda não tem serviços favoritos.");
+      return;
+    }
+
+    if (command.includes("sobre")) {
+      setActive("sobre");
+      setMenuOpen(false);
+      speakText("Sobre o CHAMOU, FALOU. Um aplicativo para facilitar o acesso a serviços públicos e de emergência.");
+      return;
+    }
+
+    if (command.includes("proximo") || command.includes("servicos proximos") || command.includes("localizacao")) {
+      setActive("mapa");
+      setMenuOpen(false);
+      speakText("Serviços próximos. Você pode atualizar sua localização nesta tela.");
+      return;
+    }
+
+    if (command.includes("compartilhar localizacao") || command.includes("enviar localizacao")) {
+      shareCurrentLocation();
+      speakText("Vou preparar o compartilhamento da sua localização.");
+      return;
+    }
+
+    const situationMatch = situationGuides.find(item => {
+      const hay = normalizeText(`${item.title} ${item.description}`);
+      return hay.includes(command) || command.includes(normalizeText(item.title));
+    });
+    if (situationMatch) {
+      openSituation(situationMatch);
+      speakText(`${situationMatch.title}. ${situationMatch.description}`);
+      return;
+    }
+
+    if (command.includes("sos") || command.includes("emergencia")) {
+      setSosOpen(true);
+      speakText("Menu SOS aberto. Escolha Polícia, SAMU, Bombeiros ou compartilhe sua localização.");
+      return;
+    }
+
+    const matchedService = services.find(service => {
+      const hay = normalizeText(`${service.title} ${(service.keywords || []).join(" ")}`);
+      return hay.includes(command) || command.includes(normalizeText(service.title));
+    });
+
+    if (matchedService) {
+      setActive("inicio");
+      setSearch("");
+      setMenuOpen(false);
+      openService(matchedService);
+      const announcement = `${matchedService.title}. ${matchedService.subtitle}. Número ${matchedService.number}.`;
+      setVoiceStatus(announcement);
+      speakText(announcement);
+      return;
+    }
+
+    const searchCommand = command.replace(/^(buscar|procure|quero|preciso de)\s+/, "").trim();
+    if (searchCommand) {
+      setActive("inicio");
+      setMenuOpen(false);
+      setSearch(searchCommand);
+      const results = services.filter(service => {
+        const hay = normalizeText(`${service.title} ${service.subtitle} ${(service.keywords || []).join(" ")}`);
+        return hay.includes(searchCommand);
+      });
+      if (results.length) {
+        const first = results[0];
+        const answer = `${results.length} serviço${results.length > 1 ? "s" : ""} encontrado${results.length > 1 ? "s" : ""}. O primeiro é ${first.title}, número ${first.number}.`;
+        setVoiceStatus(answer);
+        speakText(answer);
+      } else {
+        const answer = `Não encontrei um serviço para ${searchCommand}. Tente dizer polícia, SAMU, bombeiros, Procon ou outro serviço.`;
+        setVoiceStatus(answer);
+        speakText(answer);
+      }
+    }
+  };
+
+  const toggleAccessibilityMode = () => {
+    setAccessibilityMode(current => {
+      const next = !current;
+      const text = next
+        ? "Modo acessibilidade ativado. O aplicativo vai narrar as telas e aumentar o conforto de leitura e toque."
+        : "Modo acessibilidade desativado.";
+      setVoiceStatus(text);
+      speakText(text);
+      return next;
+    });
+  };
+
+  const startVoiceAssistant = async () => {
+    if (listening) {
+      try {
+        await SpeechRecognition.stop();
+      } catch {}
+      recognitionRef.current?.stop();
+      setListening(false);
+      setVoiceStatus("Escuta encerrada.");
+      return;
+    }
+
+    const isNative = !!window.Capacitor?.isNativePlatform?.();
+    if (isNative) {
+      try {
+        const available = await SpeechRecognition.available();
+        if (!available.available) throw new Error("Indisponível");
+        const permissions = await SpeechRecognition.checkPermissions();
+        if (permissions.speechRecognition !== "granted") {
+          const requested = await SpeechRecognition.requestPermissions();
+          if (requested.speechRecognition !== "granted") throw new Error("Permissão negada");
+        }
+        nativeVoiceRef.current = true;
+        if (voiceListenerRef.current) await voiceListenerRef.current.remove().catch(() => {});
+        voiceListenerRef.current = await SpeechRecognition.addListener("listeningState", data => {
+          setListening(data.status === "started");
+        });
+        setListening(true);
+        setVoiceStatus("Estou ouvindo. Diga, por exemplo: Polícia, SAMU, abrir guia ou ler tela.");
+        await speakText("Estou ouvindo. Diga, por exemplo, polícia, SAMU, abrir guia ou ler tela.");
+        const result = await SpeechRecognition.start({
+          language: "pt-BR",
+          maxResults: 3,
+          partialResults: false,
+          popup: false
+        });
+        const transcript = result?.matches?.[0] || "";
+        setListening(false);
+        if (transcript) executeVoiceCommand(transcript);
+        return;
+      } catch {
+        nativeVoiceRef.current = false;
+        setListening(false);
+      }
+    }
+
+    const SpeechRecognitionWeb = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionWeb) {
+      const text = "O assistente de voz precisa de reconhecimento de fala. No Android, reinstale o aplicativo depois de sincronizar as permissões do microfone.";
+      setVoiceStatus(text);
+      speakText(text);
+      return;
+    }
+
+    const recognition = new SpeechRecognitionWeb();
+    recognition.lang = "pt-BR";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onresult = (e) => {
+      const transcript = e.results?.[0]?.[0]?.transcript || "";
+      setListening(false);
+      executeVoiceCommand(transcript);
+    };
+    recognition.onerror = () => {
+      setListening(false);
+      const text = "Não entendi. Tente falar novamente.";
+      setVoiceStatus(text);
+      speakText(text);
+    };
+    recognition.onend = () => setListening(false);
+    recognitionRef.current = recognition;
+    setListening(true);
+    setVoiceStatus("Estou ouvindo. Fale agora.");
+    await speakText("Estou ouvindo. Fale agora.");
+    recognition.start();
+  };
+
   const toggleVoiceSearch = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -366,6 +780,8 @@ function App() {
     }
     if (listening) {
       recognitionRef.current && recognitionRef.current.stop();
+      if (voiceListenerRef.current) voiceListenerRef.current.remove().catch(() => {});
+      TextToSpeech.stop().catch(() => {});
       setListening(false);
       return;
     }
@@ -388,11 +804,16 @@ function App() {
     recognition.start();
   };
 
-  if (loading) return <main className="app-shell"><Skeleton /></main>;
+  if (loading) return <main className={`app-shell${accessibilityMode ? " accessibility-active" : ""}`}><Skeleton /></main>;
 
   return (
-    <main className="app-shell">
-      <div className="mobile-frame">
+    <main className={`app-shell${accessibilityMode ? " accessibility-active" : ""}`}>
+      <div
+        className="mobile-frame"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <header className="topbar brand-header">
           <button className="icon-btn header-icon-btn" aria-label="Abrir menu" onClick={() => setMenuOpen(true)}><Menu size={23}/></button>
           <div className="brand brand-lockup" aria-label="CHAMOU, FALOU">
@@ -406,16 +827,33 @@ function App() {
             >
               {theme === "dark" ? <Sun size={20}/> : <Moon size={20}/>}
             </button>
+            <button className={`icon-btn ${accessibilityMode ? "accessibility-active-btn" : ""}`} aria-label={accessibilityMode ? "Desativar modo acessibilidade" : "Ativar modo acessibilidade"} onClick={toggleAccessibilityMode}>
+              <Accessibility size={20}/>
+            </button>
             <button className="icon-btn" aria-label="Notificações" onClick={() => setToast("Nenhuma nova notificação")}>
               <Bell size={21}/>
             </button>
           </div>
         </header>
 
+        {!online && (
+          <div className="offline-banner" role="status"><Wifi size={15}/> Você está offline. Os serviços essenciais continuam disponíveis.</div>
+        )}
+
         <AnimatePresence>
           {menuOpen && (
             <motion.div className="drawer-backdrop" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={() => setMenuOpen(false)}>
-              <motion.aside className="side-drawer" initial={{x:-320}} animate={{x:0}} exit={{x:-320}} onClick={e => e.stopPropagation()}>
+              <motion.aside
+                className="side-drawer"
+                initial={{x:-320}}
+                animate={{x:0}}
+                exit={{x:-320}}
+                drag="x"
+                dragConstraints={{ left: -320, right: 0 }}
+                dragElastic={0.08}
+                onDragEnd={(_, info) => { if (info.offset.x < -80 || info.velocity.x < -450) setMenuOpen(false); }}
+                onClick={e => e.stopPropagation()}
+              >
                 <div className="drawer-head">
                   <div className="brand drawer-brand"><span>CHAMOU,</span><b>FALOU</b></div>
                   <button className="icon-btn" aria-label="Fechar menu" onClick={() => setMenuOpen(false)}><X size={22}/></button>
@@ -487,6 +925,25 @@ function App() {
                 </>
               ) : (
                 <>
+                  <section className="situation-section" aria-labelledby="situation-title">
+                    <div className="section-heading emergency-heading">
+                      <div>
+                        <p className="section-kicker">ORIENTAÇÃO RÁPIDA</p>
+                        <h2 id="situation-title">O que aconteceu?</h2>
+                      </div>
+                      <span>Escolha uma situação</span>
+                    </div>
+                    <div className="situation-grid">
+                      {situationGuides.map(item => {
+                        const Icon = item.icon;
+                        return <button key={item.id} className="situation-card" onClick={() => openSituation(item)}>
+                          <span className={`situation-icon ${item.color}`}><Icon size={21}/></span>
+                          <span><strong>{item.title}</strong><small>{item.description}</small></span>
+                        </button>;
+                      })}
+                    </div>
+                  </section>
+
                   <section className="emergency-section" aria-labelledby="emergency-title">
                     <div className="section-heading emergency-heading">
                       <div>
@@ -617,16 +1074,16 @@ function App() {
             <motion.section key="map" initial={{opacity:0,x:15}} animate={{opacity:1,x:0}} className="content simple-page">
               <p className="eyebrow">LOCALIZAÇÃO</p>
               <h1>Serviços próximos</h1>
-              <div className="fake-map">
-                <MapPin size={42}/>
-                <strong>Mapa de serviços</strong>
-                <span>{locationLabel === "Sua região" ? "Toque abaixo para localizar sua região." : `Região identificada: ${locationLabel}`}</span>
-                <span>Protótipo — integração de mapas pode ser adicionada depois.</span>
-              </div>
+              <p className="muted-text">Encontre rapidamente locais de atendimento próximos. O botão abre o mapa do aparelho para mostrar rotas e horários atualizados.</p>
+              <div className="location-status-card"><LocateFixed size={22}/><div><strong>{locationLabel}</strong><span>{online ? "Localização pode ser atualizada quando você permitir." : "Sem internet: a localização pode ficar indisponível."}</span></div></div>
               <button className="primary-btn" onClick={locateUser} disabled={locating}>
                 {locating ? <Loader2 size={19} className="spin"/> : <MapPin size={19}/>}
                 {locating ? "Localizando..." : "Atualizar localização"}
               </button>
+              <div className="nearby-grid">
+                {nearbyCategories.map(item => <button key={item.label} className="nearby-card" onClick={() => openMapsSearch(item.query)}><MapPin size={18}/><span><strong>{item.label}</strong><small>Pesquisar no mapa</small></span><ExternalLink size={16}/></button>)}
+              </div>
+              <button className="secondary-btn location-share-btn" onClick={shareCurrentLocation}><Share2 size={18}/> Compartilhar minha localização</button>
             </motion.section>
           )}
 
@@ -685,40 +1142,55 @@ function App() {
           )}
 
           {active === "sobre" && (
-            <motion.section key="about" initial={{opacity:0,x:15}} animate={{opacity:1,x:0}} className="content simple-page">
-              <p className="eyebrow">SOBRE</p>
+            <motion.section key="about" initial={{opacity:0,x:15}} animate={{opacity:1,x:0}} className="content simple-page about-page">
+              <p className="eyebrow">SOBRE O APP</p>
               <h1>CHAMOU, FALOU</h1>
-              <p className="muted-text">
-                O <strong>CHAMOU, FALOU</strong> foi criado para facilitar o acesso da população a serviços públicos e de emergência em um único lugar.
+              <p className="muted-text about-lead">
+                Um aplicativo criado para facilitar o acesso da população a serviços públicos e de emergência em um único lugar.
               </p>
 
               <div className="about-card">
-                <Info size={20}/>
+                <HeartHandshake size={20}/>
                 <div>
                   <strong>Nossa missão</strong>
-                  <span>Facilitar o acesso à ajuda quando ela mais é necessária, com uma experiência simples, rápida e acessível.</span>
+                  <span>Facilitar o acesso à ajuda quando ela mais é necessária, com uma experiência simples, rápida e fácil de entender.</span>
+                </div>
+              </div>
+
+              <div className="about-card">
+                <Search size={20}/>
+                <div>
+                  <strong>Como funciona</strong>
+                  <span>O usuário pode pesquisar serviços, acessar os principais atendimentos, salvar favoritos e consultar rapidamente os canais disponíveis para cada necessidade.</span>
+                </div>
+              </div>
+
+              <div className="about-card">
+                <Shield size={20}/>
+                <div>
+                  <strong>Feito para ser simples</strong>
+                  <span>O projeto foi pensado para reduzir a quantidade de informações que o usuário precisa procurar, especialmente em momentos de pressa ou preocupação.</span>
                 </div>
               </div>
 
               <div className="about-card">
                 <ShieldAlert size={20}/>
                 <div>
-                  <strong>Como funciona</strong>
-                  <span>Pesquise um serviço, salve seus favoritos, consulte atendimentos recentes ou use o acesso rápido para encontrar os principais canais de emergência.</span>
+                  <strong>Informação e segurança</strong>
+                  <span>O CHAMOU, FALOU é uma ferramenta de apoio e não substitui os canais oficiais dos órgãos públicos. Antes de uma versão de produção, os contatos e informações devem ser validados e mantidos atualizados.</span>
                 </div>
               </div>
 
-              <div className="about-card">
-                <Phone size={20}/>
+              <div className="about-card about-signature">
                 <div>
-                  <strong>Em caso de emergência</strong>
-                  <span>O aplicativo é uma ferramenta de apoio e não substitui os canais oficiais. Em uma emergência real, utilize o número oficial do serviço necessário.</span>
+                  <strong>CHAMOU, FALOU</strong>
+                  <span>Encontrou. Acionou.</span>
                 </div>
               </div>
 
               <div className="about-meta">
-                <span>Versão 1.0.0</span>
-                <span>CHAMOU, FALOU — Encontrou. Acionou.</span>
+                <span>Versão 1.0.0 · Protótipo funcional</span>
+                <span>Desenvolvido com foco em simplicidade, acessibilidade e rapidez.</span>
               </div>
             </motion.section>
           )}
@@ -746,6 +1218,8 @@ function App() {
                     </button>
                   );
                 })}
+                <button className="sos-menu-item" onClick={shareCurrentLocation}><Share2 size={18}/><span>Compartilhar localização</span><ChevronRight size={15}/></button>
+                <button className="sos-menu-item" onClick={() => setContactsOpen(true)}><Users size={18}/><span>Minha rede de emergência</span><ChevronRight size={15}/></button>
               </motion.div>
             </>
           )}
@@ -760,12 +1234,95 @@ function App() {
           {sosOpen ? <X size={24}/> : <Siren size={24}/>}
         </motion.button>
 
+        <AnimatePresence>
+          {voiceAssistantOpen && (
+            <motion.div
+              className="voice-assistant-panel"
+              initial={{ opacity: 0, y: 16, scale: .96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: .96 }}
+              role="dialog"
+              aria-label="Assistente de voz"
+            >
+              <div className="voice-assistant-head">
+                <div>
+                  <strong>Assistente de voz</strong>
+                  <span>Acessibilidade</span>
+                </div>
+                <button className="icon-btn" aria-label="Fechar assistente de voz" onClick={() => setVoiceAssistantOpen(false)}><X size={20}/></button>
+              </div>
+              <p className="voice-status" aria-live="polite">{voiceStatus}</p>
+              <button className={`accessibility-mode-toggle${accessibilityMode ? " active" : ""}`} onClick={toggleAccessibilityMode} aria-pressed={accessibilityMode}>
+                <Accessibility size={20}/>
+                <span><strong>{accessibilityMode ? "Modo acessibilidade ativo" : "Ativar modo acessibilidade"}</strong><small>{accessibilityMode ? "Narra as telas e amplia o conforto de leitura." : "Ativa narração automática e alvos de toque maiores."}</small></span>
+              </button>
+
+              <div className="voice-assistant-actions">
+                <button className={`voice-main-btn${listening ? " listening" : ""}`} onClick={startVoiceAssistant} aria-label={listening ? "Parar de ouvir" : "Falar com o assistente"}>
+                  {listening ? <MicOff size={28}/> : <Mic size={28}/>}
+                  <span>{listening ? "Parar de ouvir" : "Falar"}</span>
+                </button>
+                <button className="voice-read-btn" onClick={describeCurrentScreen} aria-label="Ler esta tela em voz alta">
+                  <Accessibility size={21}/>
+                  <span>Ler tela</span>
+                </button>
+              </div>
+              <small className="voice-examples">Diga: “polícia”, “SAMU”, “abrir guia”, “serviços salvos” ou “ler tela”.</small>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <motion.button
+          className={`voice-fab${listening ? " listening" : ""}`}
+          aria-label="Abrir assistente de voz"
+          whileTap={{ scale: 0.94 }}
+          onClick={() => setVoiceAssistantOpen(v => !v)}
+        >
+          {voiceAssistantOpen ? <X size={24}/> : <Mic size={24}/>}
+        </motion.button>
+
         <nav className="bottom-nav" aria-label="Navegação principal">
-          <button className={active==="inicio" ? "active" : ""} onClick={() => setActive("inicio")}><Home size={21}/><span>Início</span></button>
-          <button className={active==="mapa" ? "active" : ""} onClick={() => setActive("mapa")}><MapPin size={21}/><span>Próximos</span></button>
-          <button className={active==="guia" ? "active" : ""} onClick={() => setActive("guia")}><ClipboardList size={21}/><span>Guia</span></button>
-          <button className={active==="sobre" ? "active" : ""} onClick={() => setActive("sobre")}><Info size={21}/><span>Sobre</span></button>
+          <button className={active==="inicio" ? "active" : ""} aria-current={active === "inicio" ? "page" : undefined} onClick={() => setActive("inicio")}><Home size={21}/><span>Início</span></button>
+          <button className={active==="mapa" ? "active" : ""} aria-current={active === "mapa" ? "page" : undefined} onClick={() => setActive("mapa")}><MapPin size={21}/><span>Próximos</span></button>
+          <button className={active==="guia" ? "active" : ""} aria-current={active === "guia" ? "page" : undefined} onClick={() => setActive("guia")}><ClipboardList size={21}/><span>Guia</span></button>
+          <button className={active==="sobre" ? "active" : ""} aria-current={active === "sobre" ? "page" : undefined} onClick={() => setActive("sobre")}><Info size={21}/><span>Sobre</span></button>
         </nav>
+
+        <AnimatePresence>
+          {situationOpen && selectedSituation && (
+            <motion.div className="modal-backdrop" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={() => setSituationOpen(false)}>
+              <motion.div className="service-modal situation-modal" initial={{y:60,opacity:0}} animate={{y:0,opacity:1}} exit={{y:60,opacity:0}} onClick={e=>e.stopPropagation()}>
+                <button className="modal-close" aria-label="Fechar orientação" onClick={() => setSituationOpen(false)}><X/></button>
+                <div className={`modal-icon ${selectedSituation.color}`}><selectedSituation.icon size={30}/></div>
+                <p className="eyebrow">ORIENTAÇÃO</p>
+                <h2>{selectedSituation.title}</h2>
+                <p>{selectedSituation.description}</p>
+                <div className="guidance-box"><strong>O que fazer agora?</strong><span>Vá para um local seguro, evite se colocar em risco e acione o serviço indicado abaixo.</span></div>
+                {selectedSituation.service ? (() => { const service = services.find(s => s.id === selectedSituation.service); return service ? <div className="number-box"><span>Serviço indicado</span><strong>{service.title} · {service.number}</strong></div> : null; })() : null}
+                <div className="modal-actions"><button className="secondary-btn" onClick={() => { setSituationOpen(false); setActive("guia"); }}><ClipboardList size={17}/> Abrir guia</button></div>
+                {selectedSituation.service && <button className="primary-btn" onClick={() => useSituation(selectedSituation)}><Phone size={19}/> Continuar para o serviço</button>}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {contactsOpen && (
+            <motion.div className="modal-backdrop" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={() => setContactsOpen(false)}>
+              <motion.div className="service-modal" initial={{y:60,opacity:0}} animate={{y:0,opacity:1}} exit={{y:60,opacity:0}} onClick={e=>e.stopPropagation()}>
+                <button className="modal-close" aria-label="Fechar contatos" onClick={() => setContactsOpen(false)}><X/></button>
+                <div className="modal-icon purple"><Users size={30}/></div>
+                <p className="eyebrow">REDE DE EMERGÊNCIA</p>
+                <h2>Meus contatos</h2>
+                <p>Cadastre até cinco pessoas de confiança para acesso rápido durante uma emergência.</p>
+                <div className="contact-list">
+                  {emergencyContacts.length === 0 ? <div className="empty"><span>Nenhum contato cadastrado.</span></div> : emergencyContacts.map(contact => <div className="contact-card" key={contact.id}><div><strong>{contact.name}</strong><small>{contact.phone}</small></div><div><a className="saved-call-btn" href={`tel:${contact.phone.replace(/\D/g, "")}`} aria-label={`Ligar para ${contact.name}`}><Phone size={16}/></a><button className="icon-btn" aria-label={`Remover ${contact.name}`} onClick={() => removeEmergencyContact(contact.id)}><X size={16}/></button></div></div>)}
+                </div>
+                <button className="secondary-btn" onClick={addEmergencyContact}><UserPlus size={18}/> Adicionar contato</button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {selected && (
