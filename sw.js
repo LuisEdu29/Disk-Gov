@@ -1,4 +1,4 @@
-const CACHE_NAME = 'disk-gov-v4';
+const CACHE_NAME = 'disk-gov-v5';
 
 // Só precisamos garantir que a "casca" do app esteja disponível de imediato.
 // Os arquivos JS/CSS gerados pelo Vite (com hash no nome) são cacheados
