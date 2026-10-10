@@ -1,0 +1,22 @@
+{
+  "name": "Disk Gov - Serviços Públicos",
+  "short_name": "Disk Gov",
+  "description": "Serviços públicos essenciais em um só lugar.",
+  "start_url": "/Disk-Gov/",
+  "scope": "/Disk-Gov/",
+  "display": "standalone",
+  "background_color": "#f7f8fa",
+  "theme_color": "#f7f8fa",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
