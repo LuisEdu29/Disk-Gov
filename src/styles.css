@@ -935,3 +935,30 @@ h1 { font-size: 30px; line-height: 1.05; letter-spacing:-1.1px; margin:0 0 9px; 
 .verify-actions { display:flex; gap:6px; flex-wrap:wrap; }
 .verify-actions .secondary-btn { flex:1; }
 .received-box { display:flex; flex-direction:column; gap:8px; margin:8px 0 10px; }
+
+/* ── Header (v1.4.1): logo realmente centralizado, botões padronizados e arcos decorativos discretos ── */
+.topbar.brand-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: auto;
+  min-height: 70px;
+  padding: env(safe-area-inset-top, 0px) 14px 0;
+  background: linear-gradient(135deg, var(--brand-purple-deep) 0%, var(--brand-purple) 65%);
+  border-radius: 0 0 24px 24px;
+  box-shadow: 0 8px 22px rgba(93, 42, 145, .22);
+}
+.topbar.brand-header > .header-icon-btn { justify-self: start; }
+.topbar.brand-header .topbar-actions { justify-self: end; gap: 8px; }
+.brand-header .header-icon-btn {
+  width: 40px; height: 40px; border-radius: 13px;
+  background: rgba(255, 255, 255, .14);
+}
+.brand-header .header-icon-btn:hover { background: rgba(255, 255, 255, .24); }
+.brand-header .header-icon-btn:active { transform: scale(.94); }
+.brand-header .brand-lockup { gap: 3px; line-height: 1; text-align: center; }
+.brand-header .brand-lockup span { font-size: 12px; letter-spacing: 2.2px; }
+.brand-header .brand-lockup b { font-size: 25px; letter-spacing: -1px; }
+/* Arcos amarelos: mais suaves e longe dos botões, para não cortarem os ícones */
+.brand-header::after { right: -70px; top: -78px; opacity: .22; border-width: 3px; }
+.brand-header::before { right: auto; left: -62px; bottom: -70px; opacity: .22; border-width: 3px; }
