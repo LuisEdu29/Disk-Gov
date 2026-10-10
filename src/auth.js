@@ -40,11 +40,13 @@ function getFirebase() {
 export const toProfile = (u) => u ? {
   uid: u.uid,
   name: u.displayName || (u.email ? u.email.split("@")[0] : "Usuário"),
-  email: u.email || ""
+  email: u.email || "",
+  emailVerified: !!u.emailVerified
 } : null;
 
 // Mensagens de erro em português.
 export function authErrorMessage(err) {
+  console.error("[auth]", err?.code, err?.message);
   const code = err?.code || "";
   switch (code) {
     case "auth/invalid-email": return "Esse e-mail não parece válido.";
@@ -62,7 +64,11 @@ export function authErrorMessage(err) {
     case "auth/api-key-not-valid":
     case "auth/invalid-api-key": return "A configuração do Firebase está inválida.";
     case "app/not-configured": return "O login ainda não foi configurado neste app.";
-    default: return "Não foi possível concluir. Tente novamente.";
+    case "auth/configuration-not-found": return "O Firebase Authentication ainda não foi iniciado no projeto (console → Authentication → Começar).";
+    case "auth/internal-error": return "Erro interno do Firebase. Confira se o login por e-mail/senha está ativado e se a chave de API permite este site.";
+    default:
+      if (code.includes("requests-from-referer")) return "A chave de API do Firebase está bloqueando este site. Libere o domínio no Google Cloud Console.";
+      return "Não foi possível concluir. Tente novamente." + (code ? ` (${code})` : "");
   }
 }
 
@@ -87,6 +93,8 @@ export async function signUp(name, email, password) {
   if (cleanName) {
     try { await authMod.updateProfile(cred.user, { displayName: cleanName }); } catch { /* segue sem nome */ }
   }
+  // Confirmar o e-mail é necessário para enviar/receber localizações (evita alguém se passar por outra pessoa).
+  try { auth.languageCode = "pt-BR"; await authMod.sendEmailVerification(cred.user); } catch { /* dá para reenviar depois */ }
   const profile = toProfile(auth.currentUser || cred.user);
   saveUserProfile(profile, true);
   return profile;
@@ -176,4 +184,81 @@ export async function sendFeedback(entry) {
   ]);
   write.catch(() => {});
   return result;
+}
+
+// ── Confirmação de e-mail ────────────────────────────────────
+
+export async function resendVerification() {
+  const { auth, authMod } = await getFirebase();
+  if (!auth.currentUser) throw new Error("no-user");
+  auth.languageCode = "pt-BR";
+  await authMod.sendEmailVerification(auth.currentUser);
+}
+
+/** Relê a conta e renova o token (necessário para o Firestore reconhecer o e-mail como confirmado). */
+export async function refreshUser() {
+  const { auth } = await getFirebase();
+  if (!auth.currentUser) return null;
+  await auth.currentUser.reload();
+  await auth.currentUser.getIdToken(true);
+  return toProfile(auth.currentUser);
+}
+
+// ── Localização compartilhada (coleção locations/{uid}) ──────
+
+/** Publica a minha localização para os e-mails da lista. Retorna "sent" | "queued". */
+export async function publishLocation(uid, name, email, lat, lon, notify) {
+  const { db, fsMod } = await getFirebase();
+  const write = fsMod.setDoc(fsMod.doc(db, "locations", uid), {
+    name: name || "", email: email || "", lat, lon,
+    notify: notify.map(e => e.trim().toLowerCase()).slice(0, 5),
+    updatedAt: fsMod.serverTimestamp()
+  });
+  const result = await Promise.race([
+    write.then(() => "sent"),
+    new Promise(resolve => setTimeout(() => resolve("queued"), 8000))
+  ]);
+  write.catch(() => {});
+  return result;
+}
+
+export async function stopSharingLocation(uid) {
+  const { db, fsMod } = await getFirebase();
+  await fsMod.deleteDoc(fsMod.doc(db, "locations", uid));
+}
+
+const toLocation = (d) => {
+  const x = d.data();
+  return { uid: d.id, name: x.name || "Contato", email: x.email || "", lat: x.lat, lon: x.lon, at: x.updatedAt?.toMillis ? x.updatedAt.toMillis() : Date.now() };
+};
+
+/** Localizações que outras pessoas compartilharam com o meu e-mail (precisa estar confirmado). */
+export function watchSharedWithMe(email, onData, onError) {
+  let cancelled = false;
+  let unsubscribe = () => {};
+  getFirebase()
+    .then(({ db, fsMod }) => {
+      if (cancelled) return;
+      const q = fsMod.query(fsMod.collection(db, "locations"), fsMod.where("notify", "array-contains", email.trim().toLowerCase()));
+      unsubscribe = fsMod.onSnapshot(
+        q,
+        snap => onData(snap.docs.map(toLocation).sort((a, b) => b.at - a.at)),
+        err => onError && onError(err)
+      );
+    })
+    .catch(err => onError && onError(err));
+  return () => { cancelled = true; unsubscribe(); };
+}
+
+/** Acompanha se eu estou compartilhando a minha localização agora (documento locations/{uid}). */
+export function watchMyShare(uid, onData) {
+  let cancelled = false;
+  let unsubscribe = () => {};
+  getFirebase()
+    .then(({ db, fsMod }) => {
+      if (cancelled) return;
+      unsubscribe = fsMod.onSnapshot(fsMod.doc(db, "locations", uid), snap => onData(snap.exists() ? toLocation(snap) : null), () => onData(null));
+    })
+    .catch(() => onData(null));
+  return () => { cancelled = true; unsubscribe(); };
 }
