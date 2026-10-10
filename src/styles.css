@@ -962,3 +962,5 @@ h1 { font-size: 30px; line-height: 1.05; letter-spacing:-1.1px; margin:0 0 9px; 
 /* Arcos amarelos: mais suaves e longe dos botões, para não cortarem os ícones */
 .brand-header::after { right: -70px; top: -78px; opacity: .22; border-width: 3px; }
 .brand-header::before { right: auto; left: -62px; bottom: -70px; opacity: .22; border-width: 3px; }
+.brand-header .brand-lockup { padding: 6px 0; }
+.brand-header .brand-logo { display:block; height:50px; width:auto; max-width:100%; user-select:none; -webkit-user-drag:none; }
