@@ -809,3 +809,113 @@ h1 { font-size: 30px; line-height: 1.05; letter-spacing:-1.1px; margin:0 0 9px; 
     100% { opacity:0; transform:scale(1.12); }
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════
+   v1.2 — botões flutuantes empilhados, conta, busca e feedback
+   ═══════════════════════════════════════════════════════════ */
+
+/* Botão de emergência (SOS) e botão de voz: um em cima do outro, nunca sobrepostos. */
+.app-shell {
+  --fab-size: 56px;
+  --fab-gap: 12px;
+  --fab-base: calc(84px + max(env(safe-area-inset-bottom, 0px), 18px));
+  --fab-right: max(16px, calc(50% - 224px));
+}
+.app-shell.accessibility-active { --fab-size: 62px; }
+.voice-fab, .sos-fab {
+  position: fixed;
+  right: var(--fab-right);
+  width: var(--fab-size);
+  height: var(--fab-size);
+}
+.voice-fab { bottom: var(--fab-base); }
+.sos-fab { bottom: calc(var(--fab-base) + var(--fab-size) + var(--fab-gap)); }
+.sos-menu {
+  position: fixed;
+  right: var(--fab-right);
+  bottom: calc(var(--fab-base) + (var(--fab-size) * 2) + (var(--fab-gap) * 2));
+}
+.voice-assistant-panel {
+  bottom: calc(var(--fab-base) + (var(--fab-size) * 2) + (var(--fab-gap) * 2));
+}
+
+.primary-btn:disabled, .secondary-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+/* Menu lateral: conta opcional */
+.drawer-label-spaced { margin-top: 22px; }
+.account-card { display:flex; flex-direction:column; gap:10px; padding:12px; border:1px solid var(--border-color); border-radius:16px; background: var(--bg-surface); }
+.account-card .secondary-btn { flex:none; width:100%; }
+.account-row { display:flex; align-items:center; gap:10px; min-width:0; }
+.account-row > div { display:flex; flex-direction:column; min-width:0; }
+.account-row strong { font-size:13px; color: var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.account-row small { font-size:11px; color: var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.account-avatar { width:38px; height:38px; border-radius:50%; object-fit:cover; flex:none; }
+.account-avatar.placeholder { display:grid; place-items:center; background: var(--brand-yellow-soft); color: var(--brand-purple); }
+.account-help { font-size:11.5px; line-height:1.5; color: var(--text-muted); }
+.account-help.center, .field-hint.center { text-align:center; display:block; margin-top:10px; }
+
+/* Rede de contatos: tela de login */
+.auth-gate { display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; padding:6px 0 4px; }
+.auth-gate-icon { width:52px; height:52px; border-radius:50%; display:grid; place-items:center; background: var(--brand-yellow-soft); color: var(--brand-purple); }
+.auth-gate strong { font-size:15px; color: var(--text-primary); }
+.auth-gate p { margin:0 0 8px; font-size:12.5px; line-height:1.55; color: var(--text-secondary); }
+
+/* Busca: "entendi X como Y" */
+.search-hint { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin:0 0 12px; padding:10px 12px; border-radius:12px; background: var(--brand-yellow-soft); color: var(--text-secondary); font-size:12px; line-height:1.4; }
+.search-hint svg { flex:none; color: var(--brand-purple); }
+.search-hint strong { color: var(--text-primary); }
+[data-theme="dark"] .search-hint svg { color: var(--brand-yellow); }
+
+/* Sugestões e avaliações */
+.feedback-form { display:flex; flex-direction:column; gap:16px; margin-top:16px; }
+.feedback-block { border:0; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; min-width:0; }
+.feedback-block legend, .field-label { font-size:13px; font-weight:800; color: var(--text-primary); padding:0; }
+.field-label em { font-style:normal; font-weight:500; color: var(--text-muted); font-size:11.5px; }
+.star-rating { display:flex; gap:4px; }
+.star-btn { border:0; background:transparent; color: var(--text-faint); width:48px; height:48px; border-radius:14px; display:grid; place-items:center; transition: transform .12s ease, color .12s ease; }
+.star-btn:hover { background: var(--icon-btn-hover); }
+.star-btn:active { transform: scale(.92); }
+.star-btn.active { color: #f5a623; }
+.rating-label { font-size:12px; color: var(--text-muted); min-height:16px; }
+.chip-row { display:flex; flex-wrap:wrap; gap:8px; }
+.chip { border:1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius:999px; min-height:40px; padding:0 14px; display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; }
+.chip.active { background: var(--brand-purple); border-color: var(--brand-purple); color:#fff; }
+.field-input { width:100%; box-sizing:border-box; border:1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary); border-radius:14px; padding:12px 14px; font: inherit; font-size:14px; line-height:1.45; outline:0; resize:vertical; }
+.field-input:focus { border-color: var(--brand-purple); box-shadow: 0 0 0 3px rgba(93,42,145,.16); }
+[data-theme="dark"] .field-input:focus { border-color: var(--brand-yellow); box-shadow: 0 0 0 3px rgba(255,198,46,.18); }
+.field-hint { font-size:11px; color: var(--text-muted); align-self:flex-end; }
+.feedback-thanks { margin-top:16px; padding:18px; border:1px solid var(--border-color); border-radius:18px; background: var(--bg-surface); display:flex; flex-direction:column; gap:12px; align-items:flex-start; }
+.feedback-thanks > div { display:flex; flex-direction:column; gap:4px; }
+.feedback-thanks strong { font-size:15px; color: var(--text-primary); }
+.feedback-thanks span { font-size:12.5px; color: var(--text-secondary); line-height:1.5; }
+.feedback-thanks .secondary-btn { flex:none; width:100%; }
+.feedback-thanks-icon { width:40px; height:40px; border-radius:50%; display:grid !important; place-items:center; background: var(--tone-green-bg, #e3f6ea); color: var(--tone-green-fg, #1f9d55); }
+.feedback-history { margin-top:26px; }
+.feedback-history h2 { font-size:15px; margin:0 0 4px; color: var(--text-primary); }
+.about-feedback-btn { width:100%; margin-top:14px; flex:none; }
+
+/* Ícones do header sempre brancos sobre o fundo roxo */
+.brand-header .header-icon-btn { color:#fff; }
+
+/* Deixa o botão "Enviar" livre dos botões flutuantes ao rolar até o fim */
+.feedback-page { padding-bottom: 150px; }
+
+/* Login e criação de conta (Firebase) */
+.auth-modal { max-height: 92svh; overflow-y: auto; }
+.auth-lead { margin: 0 0 14px; font-size: 13px; line-height: 1.55; color: var(--text-secondary); }
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
+.auth-field { display: flex; flex-direction: column; gap: 6px; }
+.password-wrap { position: relative; display: block; }
+.password-wrap .field-input { padding-right: 48px; }
+.password-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; background: transparent; color: var(--text-tertiary); border-radius: 12px; display: grid; place-items: center; }
+.password-toggle:hover { background: var(--icon-btn-hover); }
+.auth-error { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--tone-red-bg); color: var(--tone-red-fg); font-size: 12.5px; line-height: 1.45; font-weight: 600; }
+.auth-success { display: flex; gap: 10px; align-items: flex-start; padding: 14px; border-radius: 14px; background: var(--brand-yellow-soft); color: var(--text-secondary); font-size: 12.5px; line-height: 1.5; }
+.auth-success svg { flex: none; color: var(--brand-purple); margin-top: 1px; }
+.auth-success strong { color: var(--text-primary); word-break: break-all; }
+.auth-links { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.link-btn { border: 0; background: transparent; color: var(--text-secondary); font-size: 12.5px; font-weight: 700; min-height: 40px; padding: 0 4px; display: inline-flex; align-items: center; gap: 4px; text-decoration: underline; text-underline-offset: 3px; }
+.link-btn.strong { color: var(--brand-purple); }
+[data-theme="dark"] .link-btn.strong { color: var(--brand-yellow); }
+.account-avatar.placeholder { font-weight: 800; font-size: 15px; }
