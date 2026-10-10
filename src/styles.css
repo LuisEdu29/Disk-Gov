@@ -506,6 +506,11 @@ h1 { font-size: 30px; line-height: 1.05; letter-spacing:-1.1px; margin:0 0 9px; 
 .guide-icon.orange { background:var(--tone-orange-bg); color:var(--tone-orange-fg); }
 .guide-icon.blue { background:var(--tone-blue-bg); color:var(--tone-blue-fg); }
 .guide-icon.purple { background:var(--tone-purple-bg); color:var(--tone-purple-fg); }
+.guide-icon.green { background:var(--tone-green-bg); color:var(--tone-green-fg); }
+.guide-icon.teal { background:var(--tone-teal-bg); color:var(--tone-teal-fg); }
+.guide-icon.indigo { background:var(--tone-indigo-bg); color:var(--tone-indigo-fg); }
+.guide-icon.pink { background:var(--tone-pink-bg); color:var(--tone-pink-fg); }
+.guide-icon.cyan { background:var(--tone-cyan-bg); color:var(--tone-cyan-fg); }
 .guide-chevron { color:var(--text-faint); transition:transform .2s ease; }
 .guide-card[open] .guide-chevron { transform:rotate(90deg); }
 .guide-content { padding:0 16px 17px; border-top:1px solid var(--border-color-soft); }
