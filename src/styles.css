@@ -924,3 +924,14 @@ h1 { font-size: 30px; line-height: 1.05; letter-spacing:-1.1px; margin:0 0 9px; 
 .link-btn.strong { color: var(--brand-purple); }
 [data-theme="dark"] .link-btn.strong { color: var(--brand-yellow); }
 .account-avatar.placeholder { font-weight: 800; font-size: 15px; }
+
+.share-location-box { display:flex; flex-direction:column; gap:6px; margin:4px 0 10px; }
+.share-location-box .account-help { margin:0; }
+.contact-card > div:last-child { flex-wrap:wrap; justify-content:flex-end; }
+.contact-email { word-break:break-all; }
+.verify-box, .my-share-box { display:flex; flex-direction:column; gap:6px; margin:6px 0 10px; padding:10px; border:1px solid var(--border-color); background:var(--bg-surface-2); border-radius:14px; }
+.verify-box strong { font-size:12px; }
+.verify-box small, .my-share-box small { font-size:10px; color:var(--text-muted); }
+.verify-actions { display:flex; gap:6px; flex-wrap:wrap; }
+.verify-actions .secondary-btn { flex:1; }
+.received-box { display:flex; flex-direction:column; gap:8px; margin:8px 0 10px; }
