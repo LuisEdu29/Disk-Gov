@@ -11,6 +11,7 @@ import {
   Eye, SunMoon, MessageSquare, LogIn, LogOut, UserRound, MessageCircle, Mail, MapPinOff
 } from "lucide-react";
 import FeedbackPage from "./FeedbackPage.jsx";
+import logoUrl from "./assets/logo.png";
 import { searchServices, normalizeText } from "./search.js";
 import AuthModal from "./AuthModal.jsx";
 import { isAuthConfigured, watchAuth, watchContacts, saveContacts, signOutUser, resendVerification, refreshUser, publishLocation, stopSharingLocation, watchSharedWithMe, watchMyShare } from "./auth.js";
@@ -966,7 +967,7 @@ function App() {
         <header className="topbar brand-header">
           <button className="icon-btn header-icon-btn" aria-label="Abrir menu" onClick={() => setMenuOpen(true)}><Menu size={23}/></button>
           <div className="brand brand-lockup" aria-label="CHAMOU, FALOU">
-            <span>CHAMOU,</span><b>FALOU</b>
+            <img className="brand-logo" src={logoUrl} alt="CHAMOU, FALOU" width="98" height="50" draggable="false" />
           </div>
           <div className="topbar-actions">
             <button
