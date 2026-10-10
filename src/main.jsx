@@ -4,22 +4,27 @@ import { motion, AnimatePresence } from "framer-motion";
 import { TextToSpeech } from "@capacitor-community/text-to-speech";
 import { SpeechRecognition } from "@capacitor-community/speech-recognition";
 import {
-  Accessibility, AlertTriangle, Bell, Car, Check, ChevronRight, ClipboardList, Clock3, Copy,
+  Accessibility, AlertTriangle, Car, Check, ChevronRight, ClipboardList, Clock3, Copy,
   Fingerprint, Flame, Gavel, Hand, HeartHandshake, Home, Info, Landmark, LifeBuoy, Loader2,
-  MapPin, Menu, Mic, MicOff, Moon, Phone, Scale, Search, Share2, Shield, ShieldAlert,
-  ShoppingBag, Siren, Star, Stethoscope, Sun, Users, Wifi, X, Volume2, Navigation, ExternalLink, UserPlus, Send, LocateFixed
+  MapPin, Menu, Mic, MicOff, Phone, Scale, Search, Share2, Shield, ShieldAlert,
+  ShoppingBag, Siren, Star, Stethoscope, Users, Wifi, X, Volume2, Navigation, ExternalLink, UserPlus, Send, LocateFixed,
+  Eye, SunMoon, MessageSquare, LogIn, LogOut, UserRound
 } from "lucide-react";
+import FeedbackPage from "./FeedbackPage.jsx";
+import { searchServices, normalizeText } from "./search.js";
+import AuthModal from "./AuthModal.jsx";
+import { isAuthConfigured, watchAuth, watchContacts, saveContacts, signOutUser } from "./auth.js";
 import "./styles.css";
 
 const services = [
-  { id: "policia", title: "Polícia Militar", subtitle: "Emergência e segurança", icon: Shield, tone: "blue", number: "190", description: "Atende situações de emergência relacionadas à segurança pública, como crimes em andamento, ameaças e situações que exigem intervenção policial.", keywords: ["crime", "roubo", "furto", "assalto", "violência", "emergência", "perigo", "socorro", "agressão", "briga"] },
-  { id: "bombeiros", title: "Bombeiros", subtitle: "Incêndios e resgates", icon: Flame, tone: "red", number: "193", description: "Atende incêndios, resgates, acidentes e outras situações que envolvam risco à vida, à integridade física ou ao patrimônio.", keywords: ["incêndio", "fogo", "resgate", "acidente", "desabamento", "vazamento de gás", "gato preso", "explosão", "afogamento"] },
-  { id: "samu", title: "SAMU", subtitle: "Emergências médicas", icon: HeartHandshake, tone: "green", number: "192", description: "Presta atendimento médico de urgência e emergência, incluindo situações de mal súbito, acidentes e outros problemas de saúde que precisam de atendimento rápido.", keywords: ["mal súbito", "desmaio", "infarto", "avc", "derrame", "ferimento grave", "parada cardíaca", "convulsão", "ambulância", "acidente"] },
-  { id: "conselho", title: "Conselho Tutelar", subtitle: "Proteção de crianças", icon: Users, tone: "purple", number: "100", description: "Atua na proteção de crianças e adolescentes quando seus direitos estão ameaçados ou violados.", keywords: ["criança", "adolescente", "maus-tratos infantil", "abuso infantil", "negligência", "trabalho infantil", "abandono de menor"] },
+  { id: "policia", title: "Polícia Militar", subtitle: "Emergência e segurança", icon: Shield, tone: "blue", number: "190", description: "Atende situações de emergência relacionadas à segurança pública, como crimes em andamento, ameaças e situações que exigem intervenção policial.", aliases: ["policial", "pm", "ladrão", "bandido", "assaltante", "delegado"], keywords: ["crime", "roubo", "furto", "assalto", "violência", "emergência", "perigo", "socorro", "agressão", "briga"] },
+  { id: "bombeiros", title: "Bombeiros", subtitle: "Incêndios e resgates", icon: Flame, tone: "red", number: "193", description: "Atende incêndios, resgates, acidentes e outras situações que envolvam risco à vida, à integridade física ou ao patrimônio.", aliases: ["bombeiro", "salvamento", "gás"], keywords: ["incêndio", "fogo", "resgate", "acidente", "desabamento", "vazamento de gás", "gato preso", "explosão", "afogamento"] },
+  { id: "samu", title: "SAMU", subtitle: "Emergências médicas", icon: HeartHandshake, tone: "green", number: "192", description: "Presta atendimento médico de urgência e emergência, incluindo situações de mal súbito, acidentes e outros problemas de saúde que precisam de atendimento rápido.", aliases: ["hospital", "médico", "passando mal", "pronto socorro", "enfermeiro"], keywords: ["mal súbito", "desmaio", "infarto", "avc", "derrame", "ferimento grave", "parada cardíaca", "convulsão", "ambulância", "acidente"] },
+  { id: "conselho", title: "Conselho Tutelar", subtitle: "Proteção de crianças", icon: Users, tone: "purple", number: "100", description: "Atua na proteção de crianças e adolescentes quando seus direitos estão ameaçados ou violados.", aliases: ["menor", "filho", "criancas", "bebê"], keywords: ["criança", "adolescente", "maus-tratos infantil", "abuso infantil", "negligência", "trabalho infantil", "abandono de menor"] },
   { id: "defesa", title: "Defesa Civil", subtitle: "Riscos e desastres", icon: Siren, tone: "orange", number: "199", description: "Atua em situações de risco e desastres, como alagamentos, enchentes, deslizamentos e outros eventos que possam colocar a população em perigo.", keywords: ["enchente", "alagamento", "deslizamento", "desabamento", "temporal", "desastre", "risco geológico", "queda de árvore"] },
   { id: "guarda", title: "Guarda Municipal", subtitle: "Segurança urbana", icon: Star, tone: "teal", number: "153", description: "Atua na segurança e proteção de espaços, equipamentos e serviços públicos, conforme as atribuições do município.", keywords: ["segurança urbana", "praça", "parque", "ocupação irregular", "vandalismo", "perturbação"] },
   { id: "prf", title: "Polícia Rodoviária Federal", subtitle: "Emergências em rodovias federais", icon: Car, tone: "indigo", number: "191", description: "Atende ocorrências e situações de emergência em rodovias federais, além de atuar na fiscalização e segurança do trânsito nessas vias.", keywords: ["rodovia", "estrada", "acidente de carro", "acidente na br", "batida", "capotamento", "fiscalização de trânsito"] },
-  { id: "mulher", title: "Central de Atendimento à Mulher", subtitle: "Denúncias de violência doméstica", icon: ShieldAlert, tone: "pink", number: "180", description: "Oferece orientação e recebe denúncias relacionadas à violência contra a mulher, incluindo situações de violência doméstica.", keywords: ["violência doméstica", "agressão", "assédio", "abuso", "feminicídio", "ameaça", "maria da penha"] },
+  { id: "mulher", title: "Central de Atendimento à Mulher", subtitle: "Denúncias de violência doméstica", icon: ShieldAlert, tone: "pink", number: "180", description: "Oferece orientação e recebe denúncias relacionadas à violência contra a mulher, incluindo situações de violência doméstica.", aliases: ["marido", "namorado", "companheiro", "espancamento"], keywords: ["violência doméstica", "agressão", "assédio", "abuso", "feminicídio", "ameaça", "maria da penha"] },
   { id: "policiacivil", title: "Polícia Civil", subtitle: "Investigação e ocorrências", icon: Fingerprint, tone: "yellow", number: "197", description: "Recebe informações e ocorrências relacionadas à investigação de crimes e às atividades da Polícia Civil.", keywords: ["investigação", "ocorrência", "furto", "roubo", "crime", "boletim de ocorrência", "b.o.", "delegacia"] },
   { id: "procon", title: "Procon", subtitle: "Defesa do consumidor", icon: ShoppingBag, tone: "cyan", number: "151", description: "Orienta e auxilia consumidores em questões relacionadas a produtos, serviços, cobranças e relações de consumo.", keywords: ["consumidor", "compra", "cobrança indevida", "propaganda enganosa", "produto com defeito", "reclamação"] },
   { id: "anatel", title: "Anatel", subtitle: "Reclamações de telefonia e internet", icon: Wifi, tone: "blue", number: "1331", description: "Canal para questões, reclamações e informações relacionadas a serviços de telecomunicações, como telefonia e internet.", keywords: ["telefone", "internet", "operadora", "sinal", "celular", "linha", "wifi", "cobrança de internet"] },
@@ -169,13 +174,6 @@ function getInitialRecent() {
   }
 }
 
-function normalizeText(text) {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
 function getInitialTheme() {
   const saved = typeof window !== "undefined" && localStorage.getItem("theme");
   if (saved === "light" || saved === "dark") return saved;
@@ -207,9 +205,10 @@ function App() {
   const [situationOpen, setSituationOpen] = useState(false);
   const [selectedSituation, setSelectedSituation] = useState(null);
   const [contactsOpen, setContactsOpen] = useState(false);
-  const [emergencyContacts, setEmergencyContacts] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("emergencyContacts") || "[]"); } catch { return []; }
-  });
+  const [user, setUser] = useState(null);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [emergencyContacts, setEmergencyContacts] = useState([]);
+  const [contactsError, setContactsError] = useState(false);
   const [online, setOnline] = useState(() => typeof navigator === "undefined" ? true : navigator.onLine);
   const [voiceStatus, setVoiceStatus] = useState("Toque no microfone e diga o que precisa.");
   const nativeVoiceRef = React.useRef(false);
@@ -242,13 +241,15 @@ function App() {
     const handleKeyDown = (e) => {
       if (e.key !== "Escape") return;
       if (confirmCallTarget) setConfirmCallTarget(null);
+      else if (authOpen) setAuthOpen(false);
+      else if (contactsOpen) setContactsOpen(false);
       else if (selected) setSelected(null);
       else if (sosOpen) setSosOpen(false);
       else if (menuOpen) setMenuOpen(false);
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [confirmCallTarget, selected, sosOpen, menuOpen]);
+  }, [confirmCallTarget, authOpen, contactsOpen, selected, sosOpen, menuOpen]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -260,21 +261,62 @@ function App() {
     localStorage.setItem("accessibilityMode", String(accessibilityMode));
   }, [accessibilityMode]);
 
-  useEffect(() => {
-    localStorage.setItem("emergencyContacts", JSON.stringify(emergencyContacts));
-  }, [emergencyContacts]);
+  // Login opcional (Firebase): acompanha entrada/saída. A sessão é lembrada entre aberturas do app.
+  useEffect(() => watchAuth(setUser), []);
 
+  // Contatos de emergência ficam na conta (Firestore) e também em cache para uso offline.
+  const uid = user?.uid;
   useEffect(() => {
-    const onlineHandler = () => setOnline(true);
-    const offlineHandler = () => setOnline(false);
-    window.addEventListener("online", onlineHandler);
-    window.addEventListener("offline", offlineHandler);
-    return () => {
-      window.removeEventListener("online", onlineHandler);
-      window.removeEventListener("offline", offlineHandler);
-    };
-  }, []);
+    setContactsError(false);
+    if (!uid) { setEmergencyContacts([]); return; }
+    return watchContacts(
+      uid,
+      (list, fromCache) => {
+        setContactsError(false);
+        if (list !== null) { setEmergencyContacts(list); return; }
 
+        // Conta sem contatos ainda: leva os que a pessoa tinha salvo neste aparelho (versões antigas do app).
+        // Só com resposta do servidor: sem internet não dá para saber se a conta já tem contatos.
+        let legacy = [];
+        if (!fromCache) {
+          try { legacy = JSON.parse(localStorage.getItem("emergencyContacts") || "[]"); } catch { legacy = []; }
+        }
+        if (Array.isArray(legacy) && legacy.length) {
+          const migrated = legacy.slice(0, 5);
+          setEmergencyContacts(migrated);
+          saveContacts(uid, user?.name, migrated).then(() => localStorage.removeItem("emergencyContacts")).catch(() => {});
+        } else {
+          setEmergencyContacts([]);
+        }
+      },
+      () => setContactsError(true)
+    );
+  }, [uid]);
+
+  const persistContacts = (next) => {
+    setEmergencyContacts(next);
+    saveContacts(uid, user?.name, next).catch(() => setToast("Não foi possível salvar na sua conta. Verifique a conexão."));
+  };
+
+  const openAuth = () => {
+    if (!isAuthConfigured) { setToast("O login ainda não foi configurado neste app"); return; }
+    setMenuOpen(false);
+    setAuthOpen(true);
+  };
+
+  const handleAuthSuccess = (profile, isNewAccount) => {
+    setUser(profile);
+    setAuthOpen(false);
+    setToast(isNewAccount ? `Conta criada! Bem-vindo, ${profile.name.split(" ")[0]}` : `Bem-vindo de volta, ${profile.name.split(" ")[0]}`);
+  };
+
+  const startLogout = async () => {
+    setMenuOpen(false);
+    setContactsOpen(false);
+    try { await signOutUser(); } catch { /* segue: limpamos a tela de qualquer jeito */ }
+    setUser(null);
+    setToast("Você saiu da conta");
+  };
 
   const toggleTheme = () => setTheme(t => t === "dark" ? "light" : "dark");
 
@@ -302,11 +344,9 @@ function App() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const filtered = useMemo(() => services.filter(s => {
-    const words = s.keywords || [];
-    const haystack = normalizeText(`${s.title} ${s.subtitle} ${words.join(" ")}`);
-    return haystack.includes(normalizeText(search));
-  }), [search]);
+  // Busca tolerante a erros: "puliça", "polisia" e "bonbeiro" também acham o serviço certo.
+  const searchResult = useMemo(() => searchServices(services, search), [search]);
+  const filtered = searchResult.items;
 
   const popularServices = useMemo(
     () => popularServiceIds.map(id => services.find(s => s.id === id)).filter(Boolean),
@@ -401,11 +441,11 @@ function App() {
     if (!name) return;
     const phone = window.prompt("Telefone do contato:");
     if (!phone) return;
-    setEmergencyContacts(c => [...c, { id: `${Date.now()}`, name, phone }].slice(-5));
+    persistContacts([...emergencyContacts, { id: `${Date.now()}`, name: name.trim(), phone: phone.trim() }].slice(-5));
     setToast(`${name} adicionado aos contatos de emergência`);
   };
 
-  const removeEmergencyContact = (id) => setEmergencyContacts(c => c.filter(item => item.id !== id));
+  const removeEmergencyContact = (id) => persistContacts(emergencyContacts.filter(item => item.id !== id));
 
   const openMapsSearch = (query) => {
     const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query + " perto de mim")}`;
@@ -466,7 +506,7 @@ function App() {
     );
   };
 
-  const swipePages = ["inicio", "mapa", "guia", "salvos", "sobre"];
+  const swipePages = ["inicio", "mapa", "guia", "salvos", "sobre", "feedback"];
 
   const handleTouchStart = (e) => {
     if (!e.touches?.length) return;
@@ -560,6 +600,7 @@ function App() {
       mapa: `Serviços próximos. ${locationLabel === "Sua região" ? "Sua região ainda não foi identificada. Use o botão Atualizar localização." : `Sua região é ${locationLabel}.`} Você pode abrir hospitais, delegacias, bombeiros, UBS e outros locais no mapa.`,
       guia: "Guia de serviços. Abra cada item para ouvir para que ele serve e o número de contato.",
       salvos: favorites.length ? `Serviços salvos. Você tem ${favorites.length} serviço${favorites.length === 1 ? " salvo" : "s salvos"}. Toque em um item para ouvir seus detalhes.` : "Serviços salvos. Você ainda não tem favoritos. Salve um serviço usando a estrela.",
+      feedback: "Sugestões e avaliações. Dê uma nota de uma a cinco estrelas, escolha o assunto e escreva sua mensagem para ajudar a melhorar o aplicativo.",
       sobre: "Sobre o CHAMOU, FALOU. Um aplicativo para facilitar o acesso a serviços públicos e de emergência. Esta versão possui um modo de acessibilidade com narração e comandos de voz."
     };
     const text = screenNames[active] || "Tela atual do aplicativo.";
@@ -609,6 +650,13 @@ function App() {
       setActive("salvos");
       setMenuOpen(false);
       speakText(favorites.length ? `Serviços salvos. Você tem ${favorites.length} favoritos.` : "Você ainda não tem serviços favoritos.");
+      return;
+    }
+
+    if (command.includes("sugest") || command.includes("avali") || command.includes("feedback")) {
+      setActive("feedback");
+      setMenuOpen(false);
+      speakText("Sugestões e avaliações. Dê uma nota e escreva sua mensagem.");
       return;
     }
 
@@ -669,10 +717,7 @@ function App() {
       setActive("inicio");
       setMenuOpen(false);
       setSearch(searchCommand);
-      const results = services.filter(service => {
-        const hay = normalizeText(`${service.title} ${service.subtitle} ${(service.keywords || []).join(" ")}`);
-        return hay.includes(searchCommand);
-      });
+      const results = searchServices(services, searchCommand).items;
       if (results.length) {
         const first = results[0];
         const answer = `${results.length} serviço${results.length > 1 ? "s" : ""} encontrado${results.length > 1 ? "s" : ""}. O primeiro é ${first.title}, número ${first.number}.`;
@@ -823,17 +868,14 @@ function App() {
           </div>
           <div className="topbar-actions">
             <button
-              className="icon-btn"
+              className="icon-btn header-icon-btn"
               aria-label={theme === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
               onClick={toggleTheme}
             >
-              {theme === "dark" ? <Sun size={20}/> : <Moon size={20}/>}
+              <SunMoon size={21}/>
             </button>
-            <button className={`icon-btn ${accessibilityMode ? "accessibility-active-btn" : ""}`} aria-label={accessibilityMode ? "Desativar modo acessibilidade" : "Ativar modo acessibilidade"} onClick={toggleAccessibilityMode}>
-              <Accessibility size={20}/>
-            </button>
-            <button className="icon-btn" aria-label="Notificações" onClick={() => setToast("Nenhuma nova notificação")}>
-              <Bell size={21}/>
+            <button className={`icon-btn header-icon-btn ${accessibilityMode ? "accessibility-active-btn" : ""}`} aria-label={accessibilityMode ? "Desativar modo acessibilidade" : "Ativar modo acessibilidade"} aria-pressed={accessibilityMode} onClick={toggleAccessibilityMode}>
+              <Eye size={21}/>
             </button>
           </div>
         </header>
@@ -861,11 +903,28 @@ function App() {
                   <button className="icon-btn" aria-label="Fechar menu" onClick={() => setMenuOpen(false)}><X size={22}/></button>
                 </div>
                 <p className="drawer-label">NAVEGAÇÃO</p>
-                {[["inicio",Home,"Início"],["mapa",MapPin,"Próximos"],["guia",ClipboardList,"Guia"],["salvos",Star,"Salvos"],["sobre",Info,"Sobre"]].map(([id,Icon,label]) => (
+                {[["inicio",Home,"Início"],["mapa",MapPin,"Próximos"],["guia",ClipboardList,"Guia"],["salvos",Star,"Salvos"],["feedback",MessageSquare,"Sugestões e avaliações"],["sobre",Info,"Sobre"]].map(([id,Icon,label]) => (
                   <button key={id} className={`drawer-item ${active===id ? "active" : ""}`} onClick={() => {setActive(id); setMenuOpen(false);}}>
                     <Icon size={20}/> {label}
                   </button>
                 ))}
+
+                <p className="drawer-label drawer-label-spaced">CONTA (OPCIONAL)</p>
+                {user ? (
+                  <div className="account-card">
+                    <div className="account-row">
+                      <span className="account-avatar placeholder" aria-hidden="true">{(user.name || "?").charAt(0).toUpperCase()}</span>
+                      <div><strong>{user.name}</strong>{user.email && <small>{user.email}</small>}</div>
+                    </div>
+                    <button className="secondary-btn" onClick={() => { setMenuOpen(false); setContactsOpen(true); }}><Users size={17}/> Minha rede de contatos</button>
+                    <button className="secondary-btn" onClick={startLogout}><LogOut size={17}/> Sair</button>
+                  </div>
+                ) : (
+                  <div className="account-card">
+                    <small className="account-help">Você não precisa de conta para usar o app. Crie uma só se quiser cadastrar sua rede de contatos de confiança.</small>
+                    <button className="secondary-btn" onClick={openAuth}><LogIn size={17}/> Entrar ou criar conta</button>
+                  </div>
+                )}
               </motion.aside>
             </motion.div>
           )}
@@ -911,6 +970,12 @@ function App() {
                     <h2>Resultados</h2>
                     <span>{filtered.length} encontrados</span>
                   </div>
+                  {searchResult.corrected && (
+                    <p className="search-hint" role="status">
+                      <Search size={14}/>
+                      <span>Entendi “{search.trim()}” como <strong>{searchResult.suggestions.slice(0, 2).join(" / ")}</strong>.</span>
+                    </p>
+                  )}
                   <div className="service-grid">
                     {filtered.length === 0 ? (
                       <div className="empty">Nenhum serviço encontrado para "{search}".</div>
@@ -1143,6 +1208,12 @@ function App() {
             </motion.section>
           )}
 
+          {active === "feedback" && (
+            <motion.section key="feedback" initial={{opacity:0,x:15}} animate={{opacity:1,x:0}} className="content simple-page feedback-page">
+              <FeedbackPage user={user} setToast={setToast} speak={accessibilityMode ? speakText : undefined} />
+            </motion.section>
+          )}
+
           {active === "sobre" && (
             <motion.section key="about" initial={{opacity:0,x:15}} animate={{opacity:1,x:0}} className="content simple-page about-page">
               <p className="eyebrow">SOBRE O APP</p>
@@ -1183,6 +1254,8 @@ function App() {
                 </div>
               </div>
 
+              <button className="secondary-btn about-feedback-btn" onClick={() => setActive("feedback")}><MessageSquare size={18}/> Enviar sugestão ou avaliação</button>
+
               <div className="about-card about-signature">
                 <div>
                   <strong>CHAMOU, FALOU</strong>
@@ -1191,7 +1264,7 @@ function App() {
               </div>
 
               <div className="about-meta">
-                <span>Versão 1.0.0 · Protótipo funcional</span>
+                <span>Versão 1.3.0 · Protótipo funcional</span>
                 <span>Desenvolvido com foco em simplicidade, acessibilidade e rapidez.</span>
               </div>
             </motion.section>
@@ -1221,7 +1294,7 @@ function App() {
                   );
                 })}
                 <button className="sos-menu-item" onClick={shareCurrentLocation}><Share2 size={18}/><span>Compartilhar localização</span><ChevronRight size={15}/></button>
-                <button className="sos-menu-item" onClick={() => setContactsOpen(true)}><Users size={18}/><span>Minha rede de emergência</span><ChevronRight size={15}/></button>
+                <button className="sos-menu-item" onClick={() => { setSosOpen(false); setContactsOpen(true); }}><Users size={18}/><span>Minha rede de emergência</span><ChevronRight size={15}/></button>
               </motion.div>
             </>
           )}
@@ -1231,7 +1304,7 @@ function App() {
           className="sos-fab"
           aria-label="Emergência — ligação rápida"
           whileTap={{ scale: 0.94 }}
-          onClick={() => setSosOpen(o => !o)}
+          onClick={() => { setVoiceAssistantOpen(false); setSosOpen(o => !o); }}
         >
           {sosOpen ? <X size={24}/> : <Siren size={24}/>}
         </motion.button>
@@ -1278,7 +1351,7 @@ function App() {
           className={`voice-fab${listening ? " listening" : ""}`}
           aria-label="Abrir assistente de voz"
           whileTap={{ scale: 0.94 }}
-          onClick={() => setVoiceAssistantOpen(v => !v)}
+          onClick={() => { setSosOpen(false); setVoiceAssistantOpen(v => !v); }}
         >
           {voiceAssistantOpen ? <X size={24}/> : <Mic size={24}/>}
         </motion.button>
@@ -1317,13 +1390,30 @@ function App() {
                 <p className="eyebrow">REDE DE EMERGÊNCIA</p>
                 <h2>Meus contatos</h2>
                 <p>Cadastre até cinco pessoas de confiança para acesso rápido durante uma emergência.</p>
-                <div className="contact-list">
-                  {emergencyContacts.length === 0 ? <div className="empty"><span>Nenhum contato cadastrado.</span></div> : emergencyContacts.map(contact => <div className="contact-card" key={contact.id}><div><strong>{contact.name}</strong><small>{contact.phone}</small></div><div><a className="saved-call-btn" href={`tel:${contact.phone.replace(/\D/g, "")}`} aria-label={`Ligar para ${contact.name}`}><Phone size={16}/></a><button className="icon-btn" aria-label={`Remover ${contact.name}`} onClick={() => removeEmergencyContact(contact.id)}><X size={16}/></button></div></div>)}
-                </div>
-                <button className="secondary-btn" onClick={addEmergencyContact}><UserPlus size={18}/> Adicionar contato</button>
+                {user ? (
+                  <>
+                    {contactsError && <p className="auth-error" role="alert">Não foi possível sincronizar agora. Mostrando o que está salvo neste aparelho.</p>}
+                    <div className="contact-list">
+                      {emergencyContacts.length === 0 ? <div className="empty"><span>Nenhum contato cadastrado.</span></div> : emergencyContacts.map(contact => <div className="contact-card" key={contact.id}><div><strong>{contact.name}</strong><small>{contact.phone}</small></div><div><a className="saved-call-btn" href={`tel:${contact.phone.replace(/\D/g, "")}`} aria-label={`Ligar para ${contact.name}`}><Phone size={16}/></a><button className="icon-btn" aria-label={`Remover ${contact.name}`} onClick={() => removeEmergencyContact(contact.id)}><X size={16}/></button></div></div>)}
+                    </div>
+                    <button className="secondary-btn" onClick={addEmergencyContact} disabled={emergencyContacts.length >= 5}><UserPlus size={18}/> {emergencyContacts.length >= 5 ? "Limite de 5 contatos" : "Adicionar contato"}</button>
+                    <small className="account-help center">Conectado como {user.email || user.name}.</small>
+                  </>
+                ) : (
+                  <div className="auth-gate">
+                    <div className="auth-gate-icon"><UserRound size={24}/></div>
+                    <strong>Entre para criar sua rede de contatos</strong>
+                    <p>É opcional e gratuito. Sua conta guarda as pessoas de confiança para você ligar rápido em uma emergência. O resto do app continua funcionando sem login.</p>
+                    <button className="primary-btn" onClick={openAuth}><LogIn size={19}/> Entrar ou criar conta</button>
+                  </div>
+                )}
               </motion.div>
             </motion.div>
           )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {authOpen && <AuthModal onClose={() => setAuthOpen(false)} onSuccess={handleAuthSuccess} setToast={setToast} />}
         </AnimatePresence>
 
         <AnimatePresence>
