@@ -319,3 +319,44 @@ cada pessoa só lê e edita os próprios contatos (máx. 5), e a coleção `feed
 ### Login salvo no banco (v1.3.1)
 
 A cada cadastro/login, o app grava em `users/{uid}` do Firestore: `name`, `email`, `createdAt` (só no cadastro) e `lastLoginAt`. A senha **não** é salva no Firestore: ela fica com hash no Firebase Authentication. **Republique o `firestore.rules`** no console (Firestore → Regras → Publicar) para liberar os novos campos.
+
+
+## Assistente com IA no navegador (v1.4)
+
+Campo de uma linha na tela inicial ("Descreva o que aconteceu") que indica o serviço
+certo usando IA que roda **no próprio aparelho**, via **WebGPU** (com fallback para CPU/WASM).
+Nada do que a pessoa digita sai do aparelho; só o modelo é baixado do Hugging Face.
+
+![Assistente com IA](docs/chatbot-webgpu.png)
+
+### Como funciona (RAG extrativo, sem alucinação)
+
+Código em `src/rag.js` e `src/ChatBot.jsx`.
+
+1. **Quebrar:** a base do app (descrição e casos de cada serviço + orientações por situação) vira trechos curtos.
+2. **Vetorizar:** cada trecho vira um vetor com o modelo `Xenova/multilingual-e5-small` (Transformers.js).
+3. **Buscar:** a pergunta é vetorizada e comparada com todos os trechos (similaridade de cosseno),
+   com um bônus para serviços que têm uma palavra da pergunta (escrita ou som igual, ex.: "polisia").
+4. **Responder:** o app mostra o serviço, o telefone e o **trecho usado como fonte**. Não há um modelo
+   gerando texto, então ele não inventa: se a nota for baixa, não se destacar da média ou empatar com
+   trechos "fora do tema", a resposta é "não encontrei".
+
+### Por que não um SLM (como o Qwen 0.5B da versão feita em aula)
+
+| | SLM gerativo (versão da aula) | Este assistente |
+|---|---|---|
+| Download | 500–800 MB | 235 MB (WebGPU fp16) ou 118 MB (CPU int8), só quando a pessoa usa o assistente |
+| Memória | Estourava | Modelo pequeno; indexa a base em < 2 s |
+| Alucinação | Inventa fatos e números | Só responde com dados do app, com a fonte |
+| Tempo por pergunta | Segundos | ~30 ms (WebGPU) |
+
+### Resultados
+
+Teste com 40 perguntas (23 sobre o app, 17 fora do tema), no Chrome com WebGPU (NVIDIA, fp16): **39/40**.
+As 17 fora do tema ("Qual a capital da França?", "me conta uma piada"...) responderam "não encontrei".
+O único erro: "comi comida estragada e estou vomitando" indicou Vigilância Sanitária em vez de SAMU.
+
+| Pergunta | Resposta |
+|---|---|
+| Tem um gato preso na árvore, quem eu chamo? | **Bombeiros — 193** (fonte: "Bombeiros: gato preso, explosão, afogamento.", similaridade 0,88) |
+| Qual a capital da França? | Não encontrei isso nas informações do app (não chuta) |

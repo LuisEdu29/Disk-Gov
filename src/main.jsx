@@ -11,6 +11,7 @@ import {
   Eye, SunMoon, MessageSquare, LogIn, LogOut, UserRound, MessageCircle, Mail, MapPinOff
 } from "lucide-react";
 import FeedbackPage from "./FeedbackPage.jsx";
+import ChatBot from "./ChatBot.jsx";
 import logoUrl from "./assets/logo.png";
 import { searchServices, normalizeText } from "./search.js";
 import AuthModal from "./AuthModal.jsx";
@@ -30,13 +31,13 @@ const services = [
   { id: "procon", title: "Procon", subtitle: "Defesa do consumidor", icon: ShoppingBag, tone: "cyan", number: "151", description: "Orienta e auxilia consumidores em questões relacionadas a produtos, serviços, cobranças e relações de consumo.", keywords: ["consumidor", "compra", "cobrança indevida", "propaganda enganosa", "produto com defeito", "reclamação"] },
   { id: "anatel", title: "Anatel", subtitle: "Reclamações de telefonia e internet", icon: Wifi, tone: "blue", number: "1331", description: "Canal para questões, reclamações e informações relacionadas a serviços de telecomunicações, como telefonia e internet.", keywords: ["telefone", "internet", "operadora", "sinal", "celular", "linha", "wifi", "cobrança de internet"] },
   { id: "disquedenuncia", title: "Disque Denúncia", subtitle: "Denúncia de crimes, sigilo garantido", icon: AlertTriangle, tone: "red", number: "181", description: "Recebe denúncias sobre crimes e situações suspeitas, com possibilidade de preservação do sigilo do denunciante.", keywords: ["denúncia anônima", "tráfico", "crime organizado", "corrupção", "sigilo", "informante"] },
-  { id: "cvv", title: "CVV", subtitle: "Apoio emocional e prevenção ao suicídio", icon: LifeBuoy, tone: "green", number: "188", description: "Oferece apoio emocional e atendimento voluntário para pessoas que precisam conversar ou estão passando por momentos difíceis.", keywords: ["suicídio", "depressão", "apoio emocional", "crise emocional", "ansiedade", "desabafo", "solidão"] },
+  { id: "cvv", title: "CVV", subtitle: "Apoio emocional e prevenção ao suicídio", icon: LifeBuoy, tone: "green", number: "188", description: "Oferece apoio emocional e atendimento voluntário para pessoas que precisam conversar ou estão passando por momentos difíceis.", keywords: ["suicídio", "depressão", "apoio emocional", "crise emocional", "ansiedade", "desabafo", "solidão", "vontade de morrer", "pensamentos suicidas"] },
   { id: "detran", title: "Detran", subtitle: "Emplacamento, CNH e multas", icon: ClipboardList, tone: "purple", number: "154", description: "Atende assuntos relacionados a trânsito e habilitação, incluindo CNH, veículos, emplacamento e multas.", keywords: ["cnh", "carteira de motorista", "multa", "emplacamento", "veículo", "habilitação", "carro"] },
   { id: "inss", title: "INSS", subtitle: "Benefícios e aposentadoria", icon: Landmark, tone: "orange", number: "135", description: "Presta informações e orientações sobre benefícios previdenciários e serviços relacionados ao INSS.", keywords: ["aposentadoria", "benefício", "auxílio doença", "pensão", "previdência", "bpc"] },
   { id: "vigilancia", title: "Vigilância Sanitária", subtitle: "Denúncias sobre estabelecimentos", icon: Stethoscope, tone: "teal", number: "150", description: "Recebe denúncias e informações relacionadas a possíveis problemas sanitários em estabelecimentos e serviços.", keywords: ["estabelecimento sujo", "alimento estragado", "condições sanitárias", "praga", "contaminação"] },
   { id: "mp", title: "Ministério Público", subtitle: "Ouvidoria, denúncias e orientação", icon: Scale, tone: "indigo", number: "127", description: "Canal de ouvidoria, denúncias e orientações sobre situações que podem envolver direitos coletivos e atuação do Ministério Público.", keywords: ["ouvidoria", "direitos coletivos", "denúncia contra órgão público", "irregularidade"] },
   { id: "defensoria", title: "Defensoria Pública", subtitle: "Orientação jurídica gratuita", icon: Gavel, tone: "pink", number: "129", description: "Oferece orientação e assistência jurídica gratuita para pessoas que precisam de apoio para acessar seus direitos.", keywords: ["advogado gratuito", "processo", "orientação jurídica", "direitos", "ação judicial", "sem advogado"] },
-  { id: "idoso", title: "Disque Idoso", subtitle: "Proteção aos direitos da pessoa idosa", icon: Accessibility, tone: "yellow", number: "100", description: "Canal para orientação, denúncias e proteção dos direitos da pessoa idosa em situações de violência ou violação de direitos.", keywords: ["idoso", "terceira idade", "maus-tratos idoso", "abandono de idoso", "abuso contra idoso"] },
+  { id: "idoso", title: "Disque Idoso", subtitle: "Proteção aos direitos da pessoa idosa", icon: Accessibility, tone: "yellow", number: "100", description: "Canal para orientação, denúncias e proteção dos direitos da pessoa idosa em situações de violência ou violação de direitos.", keywords: ["idoso", "terceira idade", "maus-tratos idoso", "abandono de idoso", "abuso contra idoso", "avó", "avô", "cuidador de idoso"] },
   { id: "libras", title: "Central de Libras", subtitle: "Intermediação em Libras para serviços públicos", icon: Hand, tone: "cyan", number: "Varia por cidade", description: "Oferece intermediação em Libras para facilitar a comunicação e o acesso a serviços públicos. O canal disponível pode variar conforme a cidade.", keywords: ["surdo", "deficiente auditivo", "libras", "comunicação acessível", "intérprete"] }
 ];
 
@@ -1095,6 +1096,13 @@ function App() {
                 </>
               ) : (
                 <>
+                  <ChatBot
+                    services={services}
+                    situationGuides={situationGuides}
+                    onOpenService={openService}
+                    speak={accessibilityMode ? speakText : undefined}
+                  />
+
                   <section className="situation-section" aria-labelledby="situation-title">
                     <div className="section-heading emergency-heading">
                       <div>
